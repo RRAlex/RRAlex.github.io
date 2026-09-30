@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rralex(7)</title>
+<meta name="description" content="rralex(7): platform architect, DevSecOps lead, free-software tinkerer.">
+<meta property="og:title" content="rralex(7)">
+<meta property="og:description" content="Platform architect, DevSecOps lead, free-software tinkerer.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/iosevka-400.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face { font-family: "Iosevka"; src: url("fonts/iosevka-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Iosevka"; src: url("fonts/iosevka-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+/* less(1) with LESS_TERMCAP colours (bold, underline), plus five ANSI colours, one per family of
+   options, the way ls --color gives each kind of file its own. */
+:root {
+  --bg: #f4f6f8;
+  --ink: #1d232a;
+  --dim: #5e6975;
+  --bold: #1f4e8c;
+  --ul: #a3355a;
+  --ops: #0b7285;     /* cyan: running things */
+  --sys: #2b7a0b;     /* green: systems */
+  --sec: #b42318;     /* red: security */
+  --ai: #7a3fd1;      /* magenta: AI */
+  --ppl: #946200;     /* yellow: people */
+  --in: 7ch;          /* man's body indent */
+  --tag: 7ch;         /* the extra indent under an option */
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151b22;
+    --ink: #d6dce3;
+    --dim: #8a96a3;
+    --bold: #82b6ff;
+    --ul: #f291b5;
+    --ops: #56d4dd;
+    --sys: #7ee787;
+    --sec: #ff7b72;
+    --ai: #d2a8ff;
+    --ppl: #e3b341;
+  }
+}
+
+* { box-sizing: border-box; }
+html { background: var(--bg); color: var(--ink); }
+body {
+  margin: 0;
+  font: 400 clamp(14px, 0.45vw + 12.5px, 17px)/1.5 "Iosevka", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-variant-ligatures: none;   /* man pages never ligate "--" or "->" */
+  -webkit-text-size-adjust: 100%;
+}
+::selection { background: var(--ink); color: var(--bg); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.page { max-width: calc(80ch + 2rem); margin: 0 auto; padding: 1.5rem 1rem 4.5rem; }
+
+/* Title lines: left, centre, right, exactly as man(1) lays them out. */
+.th { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1ch; }
+.th > :last-child { text-align: right; }
+.th.foot { margin-top: 1.5em; color: var(--dim); }
+
+/* The one loud thing: the name in block letters, piped through a colour gradient like lolcat. */
+h1 { margin: 1.5em 0 0; font: inherit; }
+.banner {
+  margin: 0; font: inherit; font-size: 2em; font-weight: 700; line-height: 1.05;
+  letter-spacing: -0.02em;   /* block glyphs overlap a hair, so no seams show between them */
+  background: linear-gradient(90deg, var(--ops), var(--sys), var(--ppl), var(--sec), var(--ai));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  width: max-content; max-width: 100%;
+}
+
+h2 { position: relative; font: inherit; font-weight: 700; color: var(--bold); margin: 1.5em 0 0; }
+/* The gutter marks the section you are reading. */
+section.here > h2::before { content: "▌"; position: absolute; left: -1.5ch; color: var(--ul); }
+section > p, section > dl { margin: 0 0 0 var(--in); }
+section > p + p { margin-top: 1.5em; }
+
+b, strong { font-weight: 700; color: var(--bold); }
+var { font-style: normal; text-decoration: underline; text-decoration-color: var(--ul); color: var(--ul); text-underline-offset: 0.2em; }
+.ops { color: var(--ops); } .sys { color: var(--sys); } .sec { color: var(--sec); } .ai { color: var(--ai); } .ppl { color: var(--ppl); }
+
+a { color: var(--bold); font-weight: 700; text-decoration: underline dotted; text-underline-offset: 0.25em; }
+a:hover { text-decoration-style: solid; }
+.syn a { font-weight: inherit; text-decoration: none; color: inherit; }
+.syn a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--ul); outline-offset: 2px; border-radius: 1px; }
+
+/* SYNOPSIS: continuation lines hang under the first argument, not under the command. */
+.syn { padding-left: 7ch; text-indent: -7ch; }
+.opt, .nw { white-space: nowrap; }
+
+dl { margin: 0; }
+dt { margin-top: 0.75em; scroll-margin-top: 3em; }
+dt:first-child { margin-top: 0; }
+dd { margin: 0 0 0 var(--tag); }
+/* An option reached from the SYNOPSIS, in the reverse video less uses for a search hit. */
+dt:target b { background: var(--ink); color: var(--bg); }
+
+mark { background: var(--ink); color: var(--bg); }
+mark.cur { background: var(--ul); color: var(--bg); }
+
+/* The status line of less(1), in its reverse video. */
+.less {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  display: flex; gap: 1ch; align-items: baseline;
+  padding: 0.15em 1ch;
+  background: var(--ink); color: var(--bg);
+  white-space: nowrap; overflow: hidden;
+}
+.less button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+.less button:hover { text-decoration: underline; }
+.less :focus-visible { outline-color: var(--bg); }
+.less .status { display: inline; }
+.less .status button + button, .less .status button { margin: 0; }
+.less .prompt { display: none; flex: 1; }
+.less.searching .prompt { display: flex; }
+.less.searching .status { display: none; }
+.less input { flex: 1; min-width: 0; font: inherit; color: inherit; background: none; border: 0; padding: 0; outline: none; caret-color: var(--bg); }
+
+dialog {
+  font: inherit; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--dim); padding: 1em 2ch; max-width: min(64ch, calc(100vw - 2rem));
+}
+dialog:focus-visible { outline: none; }
+dialog::backdrop { background: color-mix(in srgb, var(--bg) 70%, transparent); }
+dialog h2 { margin: 0 0 1em; }
+dialog table { border-collapse: collapse; }
+dialog td { padding: 0 2ch 0 0; vertical-align: top; }
+dialog td:first-child { white-space: nowrap; }
+dialog p { margin: 1em 0 0; color: var(--dim); }
+
+@media (max-width: 40rem) {
+  :root { --in: 3ch; --tag: 3ch; }
+  .th { grid-template-columns: 1fr 1fr; }
+  .th .mid { display: none; }
+  .less .wide { display: none; }
+  .page { padding-top: 1rem; }
+}
+
+/* Printed, it is a man page again: black on white, the title lines on every sheet, numbered. */
+@page {
+  size: letter; margin: 0.9in 0.9in 0.8in;
+  @top-left { content: "RRALEX(7)"; font: 10pt "Iosevka", monospace; }
+  @top-center { content: "Miscellaneous Information Manual"; font: 10pt "Iosevka", monospace; }
+  @top-right { content: "RRALEX(7)"; font: 10pt "Iosevka", monospace; }
+  @bottom-left { content: "rralex.github.io"; font: 10pt "Iosevka", monospace; }
+  @bottom-center { content: "2026-09-30"; font: 10pt "Iosevka", monospace; }
+  @bottom-right { content: counter(page); font: 10pt "Iosevka", monospace; }
+}
+/* Page 1 carries the title line in the page itself, which also covers browsers without margin boxes. */
+@page :first { @top-left { content: none; } @top-center { content: none; } @top-right { content: none; } }
+@media print {
+  :root { --bg: #fff; --ink: #000; --dim: #000; --bold: #000; --ul: #000;
+          --ops: #000; --sys: #000; --sec: #000; --ai: #000; --ppl: #000; }
+  body { font-size: 10pt; }
+  .page { max-width: none; padding: 0; }
+  .th.foot, .less, dialog { display: none; }
+  .th { margin-bottom: 1em; }
+  .banner { color: #000; background: none; }
+  section.here > h2::before { content: none; }
+  mark, mark.cur, dt:target b { background: none; color: inherit; }
+  a { text-decoration: none; }
+  h2 { break-after: avoid; }
+  dt { break-after: avoid; }
+  dd, section > p { orphans: 3; widows: 3; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="th"><span>RRALEX(7)</span><span class="mid">Miscellaneous Information Manual</span><span>RRALEX(7)</span></header>
+
+<main id="man">
+<h1><span class="sr-only">rralex</span><pre class="banner" aria-hidden="true">█▀█ █▀█ ▄▀█ █   █▀▀ ▀▄▀
+█▀▄ █▀▄ █▀█ █▄▄ ██▄ █ █</pre></h1>
+
+<section id="name">
+<h2>NAME</h2>
+<p><b>rralex</b> - platform architect, DevSecOps lead, free-software tinkerer</p>
+</section>
+
+<section id="synopsis">
+<h2>SYNOPSIS</h2>
+<p class="syn"><b>rralex</b> <span class="opt">[<a href="#opt-platform"><b class="ops">--platform</b></a>]</span> <span class="opt">[<a href="#opt-kubernetes"><b class="sys">--kubernetes</b></a>]</span> <span class="opt">[<a href="#opt-linux"><b class="sys">--linux</b></a>]</span> <span class="opt">[<a href="#opt-secops"><b class="sec">--secops</b></a>]</span> <span class="opt">[<a href="#opt-iac"><b class="sys">--iac</b></a>]</span> <span class="opt">[<a href="#opt-observe"><b class="ops">--observe</b></a>]</span> <span class="opt">[<a href="#opt-cloud"><b class="ops">--cloud</b></a>]</span> <span class="opt">[<a href="#opt-llm"><b class="ai">--llm</b></a>]</span> <span class="opt">[<a href="#opt-lead"><b class="ppl">--lead</b></a>]</span> <span class="opt"><a href="#author" title="See AUTHOR for how to hand one over"><var>problem</var></a> ...</span></p>
+</section>
+
+<section id="description">
+<h2>DESCRIPTION</h2>
+<p><b>rralex</b> designs, builds and runs the platforms other teams ship on, and keeps them secure
+while they grow. Fifteen-plus years across startups and enterprises: Linux fleets, Kubernetes at
+scale, vulnerability detection pipelines, and edge devices that have to keep working when the
+network does not.</p>
+<p>Trained in both computer science and information science, so equally interested in systems that
+scale and in information that stays trustworthy over time.</p>
+<p>Evaluates new technology by asking why, then what, then how, and skips the hype. Currently
+exploring LLM infrastructure and agentic workflows.</p>
+</section>
+
+<section id="options">
+<h2>OPTIONS</h2>
+<dl>
+<dt id="opt-platform"><b class="ops">--platform</b></dt>
+<dd>Platform architecture and site reliability: SLOs, capacity planning, incident management, on-call, cost optimization.</dd>
+<dt id="opt-kubernetes"><b class="sys">--kubernetes</b></dt>
+<dd>Managed and self-hosted clusters (EKS, GKE, kubeadm, k3s); containerd, Podman, Docker, Helm, etcd.</dd>
+<dt id="opt-linux"><b class="sys">--linux</b></dt>
+<dd>Debian, Ubuntu, RHEL. Kernel tuning, cgroups, namespaces, seccomp, capabilities, eBPF.</dd>
+<dt id="opt-secops"><b class="sec">--secops</b></dt>
+<dd>Zero trust, applied cryptography, netfilter, VPNs, TLS, GPG, Vault. Vulnerability detection at scale.</dd>
+<dt id="opt-iac"><b class="sys">--iac</b></dt>
+<dd>Ansible, Terraform, Packer, Consul; CI/CD on GitHub and GitLab. Bash, Python, Go.</dd>
+<dt id="opt-observe"><b class="ops">--observe</b></dt>
+<dd>Prometheus, Grafana, Datadog, Elasticsearch, Fluentd; PostgreSQL, MySQL, Redis, RabbitMQ.</dd>
+<dt id="opt-cloud"><b class="ops">--cloud</b></dt>
+<dd>AWS, Google Cloud, Azure, OpenStack.</dd>
+<dt id="opt-llm"><b class="ai">--llm</b></dt>
+<dd>LLM infrastructure and agentic workflows: vLLM, Ollama, llama.cpp; Claude, Gemini and local models.</dd>
+<dt id="opt-lead"><b class="ppl">--lead</b></dt>
+<dd>Leading and mentoring teams, project management, agile delivery, vendors and stakeholders, FOSS governance and compliance.</dd>
+</dl>
+</section>
+
+<section id="examples">
+<h2>EXAMPLES</h2>
+<dl>
+<dt><b>rralex</b> <b class="sec">--secops</b> <b class="ops">--platform</b> edge-appliance</dt>
+<dd>Designed a virtual appliance that customers run inside their own networks, calling home over a
+dedicated VPN so a cloud scanning platform can reach what it cannot see. Hundreds of sites.</dd>
+<dt><b>rralex</b> <b class="sys">--linux</b> <b class="sys">--iac</b> fleet-upgrade</dt>
+<dd>Moves a fleet of field devices off an aging vendor-built OS onto reproducible in-house images: a
+card-image factory that builds and self-enrolls a device with no board on the desk.</dd>
+<dt><b>rralex</b> <b class="sec">--secops</b> recovery</dt>
+<dd>Replaced one shared root password with per-device credentials that work offline. Released as
+<a href="https://github.com/RRAlex/breakglass">breakglass(1)</a>.</dd>
+<dt><b>rralex</b> <b class="ai">--llm</b> agentic-ops</dt>
+<dd>Runs infrastructure work with AI coding agents: plan first, tests before code, a fresh reviewer
+at the end, and guardrails that keep the agent away from production.</dd>
+</dl>
+</section>
+
+<section id="projects">
+<h2>PROJECTS</h2>
+<dl>
+<dt><a href="https://github.com/RRAlex/breakglass">breakglass(1)</a></dt>
+<dd>Per-device recovery credentials for a device fleet, derived rather than stored. Every device
+gets its own recovery password, computed from one master key, so a card pulled from one device
+opens nothing else. Go, HKDF-SHA256, OIDC. Apache-2.0.</dd>
+<dt><a href="https://github.com/RRAlex/TMC2130_PCB">TMC2130_PCB</a></dt>
+<dd>A breakout board that moves a 3D printer's TMC2130 stepper drivers to SPI mode. Open hardware,
+CC BY-SA 4.0.</dd>
+<dt><a href="https://github.com/RRAlex/bash">bash</a></dt>
+<dd>Shell scripts, utilities and the occasional joke.</dd>
+</dl>
+</section>
+
+<section id="environment">
+<h2>ENVIRONMENT</h2>
+<dl>
+<dt><b>LANG</b></dt>
+<dd>Works in English and French.</dd>
+</dl>
+</section>
+
+<section id="standards">
+<h2>STANDARDS</h2>
+<p>Free software first; open standards over <span class="nw">lock-in</span>.</p>
+</section>
+
+<section id="history">
+<h2>HISTORY</h2>
+<p>Has spoken on container security in production at meetups and security conferences.
+Long-time volunteer at security conferences and meetups: CTFs, workshops, mentoring and logistics.
+Once helped build a community mesh network, down to installing the nodes and their firmware.</p>
+</section>
+
+<section id="notes">
+<h2>NOTES</h2>
+<p>Also interested in knowledge systems and scientific publishing, IoT, and renewable energy.</p>
+</section>
+
+<section id="bugs">
+<h2>BUGS</h2>
+<p>Reads the RFC before the blog post.</p>
+</section>
+
+<section id="author">
+<h2>AUTHOR</h2>
+<p><b>RRAlex</b>. Reach out through GitHub: open an issue or a discussion on any of the projects above.</p>
+</section>
+
+<section id="see-also">
+<h2>SEE ALSO</h2>
+<p><a href="https://github.com/RRAlex/breakglass">breakglass(1)</a>, <a href="https://github.com/RRAlex">github.com/RRAlex</a></p>
+</section>
+</main>
+
+<footer class="th foot"><span>rralex.github.io</span><span class="mid">2026-09-30</span><span>RRALEX(7)</span></footer>
+</div>
+
+<div class="less" id="less">
+  <span class="status"><span aria-hidden="true"><span class="wide">Manual page </span><span id="pos">rralex(7)</span></span>
+    (<span class="wide">press </span><button type="button" id="search-btn"><span class="wide">/ to </span>search</button>,
+    <button type="button" id="help-btn" aria-haspopup="dialog"><span class="wide">h for </span>help</button>)</span>
+  <label class="prompt">/<input id="q" type="search" aria-label="Search pattern" autocomplete="off" spellcheck="false"></label>
+</div>
+
+<dialog id="help" aria-labelledby="help-title">
+  <h2 id="help-title">SUMMARY OF COMMANDS</h2>
+  <table>
+    <tr><td><b>j</b>  <b>k</b></td><td>Forward / backward one line.</td></tr>
+    <tr><td><b>f</b>  <b>space</b></td><td>Forward one window.</td></tr>
+    <tr><td><b>b</b></td><td>Backward one window.</td></tr>
+    <tr><td><b>d</b>  <b>u</b></td><td>Forward / backward half a window.</td></tr>
+    <tr><td><b>g</b>  <b>G</b></td><td>Go to the first / last line.</td></tr>
+    <tr><td><b>/</b><var>pattern</var></td><td>Search forward; case-insensitive unless it has capitals.</td></tr>
+    <tr><td><b>n</b>  <b>N</b></td><td>Next / previous match.</td></tr>
+    <tr><td><b>h</b></td><td>Show this help.</td></tr>
+    <tr><td><b>q</b>  <b>Esc</b></td><td>Close this help.</td></tr>
+  </table>
+  <p>The page also scrolls the ordinary way.</p>
+</dialog>
+
+<script>
+(() => {
+  const root = document.documentElement;
+  const man = document.getElementById("man");
+  const bar = document.getElementById("less");
+  const pos = document.getElementById("pos");
+  const help = document.getElementById("help");
+  const q = document.getElementById("q");
+  const sections = [...man.querySelectorAll("section")];
+
+  // One "line" is the body's computed line height, so the counter matches what you see.
+  const lineHeight = () => parseFloat(getComputedStyle(document.body).lineHeight) || 24;
+  let msg = "";   // a search result, shown until the next command
+
+  function update() {
+    const lh = lineHeight();
+    const total = Math.max(1, Math.round(root.scrollHeight / lh));
+    const atEnd = scrollY + innerHeight >= root.scrollHeight - 2;
+    // Scrolling is in whole pixels and a line is not, so round to the nearest line.
+    const first = Math.min(total, Math.round(scrollY / lh) + 1);
+    const last = atEnd ? total : Math.min(total, first + Math.round(innerHeight / lh) - 1);
+    // The range form of less -M: "lines 1-36/123", with (END) once the last line is on screen.
+    pos.textContent = `rralex(7) lines ${first}-${last}/${total}${atEnd ? " (END)" : ""}${msg ? "  " + msg : ""}`;
+
+    // The section being read is the last one whose heading has passed the top third of the window.
+    let here = sections[0];
+    for (const s of sections) if (s.getBoundingClientRect().top < innerHeight / 3) here = s;
+    if (scrollY < lh) here = sections[0];
+    if (atEnd) here = sections[sections.length - 1];
+    for (const s of sections) s.classList.toggle("here", s === here);
+  }
+
+  // Search, as less does it: every match in reverse video, the current one picked out, n and N to move.
+  let hits = [], cur = -1;
+  function clearHits() {
+    for (const m of man.querySelectorAll("mark")) m.replaceWith(m.textContent);
+    man.normalize();
+    hits = []; cur = -1;
+  }
+  function search(pattern) {
+    clearHits();
+    if (!pattern) { msg = ""; return update(); }
+    const flags = pattern === pattern.toLowerCase() ? "gi" : "g";
+    const re = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), flags);
+    const walker = document.createTreeWalker(man, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => n.parentElement.closest(".banner, .sr-only") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    for (const node of nodes) {
+      const text = node.nodeValue;
+      re.lastIndex = 0;
+      if (!re.test(text)) continue;
+      re.lastIndex = 0;   // matchAll starts from lastIndex, which test() just moved past the first match
+      const frag = document.createDocumentFragment();
+      let at = 0;
+      for (const m of text.matchAll(re)) {
+        frag.append(text.slice(at, m.index));
+        const mark = document.createElement("mark");
+        mark.textContent = m[0];
+        frag.append(mark);
+        at = m.index + m[0].length;
+      }
+      frag.append(text.slice(at));
+      node.replaceWith(frag);
+    }
+    hits = [...man.querySelectorAll("mark")];
+    if (!hits.length) { msg = "Pattern not found"; return update(); }
+    // Start from the first match below the top of the window, the way less searches forward.
+    const next = hits.findIndex((h) => h.getBoundingClientRect().top > 0);
+    go(next < 0 ? 0 : next);
+  }
+  function go(i) {
+    if (!hits.length) return;
+    cur = (i + hits.length) % hits.length;
+    hits.forEach((h, j) => h.classList.toggle("cur", j === cur));
+    const top = hits[cur].getBoundingClientRect().top + scrollY - 2 * lineHeight();
+    scrollTo({ top, behavior: "instant" });
+    msg = `/${q.value}  match ${cur + 1}/${hits.length}`;
+    update();
+  }
+
+  function openPrompt() { bar.classList.add("searching"); q.value = ""; q.focus(); }
+  function closePrompt() { bar.classList.remove("searching"); q.blur(); }
+  q.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); closePrompt(); search(q.value); }
+    else if (e.key === "Escape") { e.preventDefault(); closePrompt(); }
+  });
+  q.addEventListener("blur", () => bar.classList.remove("searching"));
+
+  const by = (px) => scrollBy({ top: px, behavior: "instant" });
+  const keys = {
+    j: () => by(lineHeight()),
+    k: () => by(-lineHeight()),
+    f: () => by(innerHeight - 2 * lineHeight()),
+    b: () => by(-(innerHeight - 2 * lineHeight())),
+    d: () => by(innerHeight / 2),
+    u: () => by(-innerHeight / 2),
+    g: () => scrollTo({ top: 0, behavior: "instant" }),
+    G: () => scrollTo({ top: root.scrollHeight, behavior: "instant" }),
+    n: () => go(cur + 1),
+    N: () => go(cur - 1),
+    "/": openPrompt,
+    h: () => (help.open ? help.close() : help.showModal()),
+  };
+
+  addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target === q) return;
+    if (help.open) {
+      if (e.key === "q" || e.key === "h") { e.preventDefault(); help.close(); }
+      return;
+    }
+    const act = keys[e.key];
+    if (!act) return;
+    e.preventDefault();
+    if (e.key !== "n" && e.key !== "N") msg = "";
+    act();
+    update();
+  });
+
+  document.getElementById("help-btn").addEventListener("click", () => help.showModal());
+  document.getElementById("search-btn").addEventListener("click", openPrompt);
+  help.addEventListener("click", (e) => { if (e.target === help) help.close(); });
+
+  addEventListener("scroll", update, { passive: true });
+  addEventListener("resize", update);
+  document.fonts.ready.then(update);
+  update();
+})();
+</script>
+</body>
+</html>
